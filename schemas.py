@@ -1,48 +1,52 @@
 """
-Database Schemas
+Database Schemas for ChapterSmith AI
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model corresponds to a MongoDB collection. The collection name is the lowercase
+form of the class name (e.g., Project -> "project").
 """
-
+from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
-from typing import Optional
+from datetime import datetime
 
-# Example schemas (replace with your own):
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+class Chapter(BaseModel):
+    number: int = Field(..., ge=1, description="Chapter number starting at 1")
+    title: str = Field(..., min_length=1, description="Chapter title")
+    text: str = Field(..., min_length=1, description="Full chapter text")
+    word_count: int = Field(..., ge=0, description="Computed word count for the chapter")
+    pov: Literal["female", "male"] = Field("female", description="Resolved POV for this chapter")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Project(BaseModel):
+    name: str = Field(..., description="Project name provided by user")
+    outline: str = Field(..., description="User provided outline text or bullet list")
+    chapter_count: int = Field(..., ge=3, le=6, description="Number of chapters 3-6")
+    pov_mode: Literal["female", "male", "dual"] = Field("female", description="POV strategy for the story")
+    genre: Optional[Literal["billionaire", "werewolf", "mafia", "general"]] = Field("general", description="Optional genre to bias tone")
+    rules: Optional[str] = Field(None, description="Extra writing rules provided by user")
+    chapters: List[Chapter] = Field(default_factory=list, description="Generated chapters")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+
+# Additional simple models for requests
+class CreateProjectRequest(BaseModel):
+    name: str
+    outline: str
+    chapter_count: int
+    pov_mode: Literal["female", "male", "dual"] = "female"
+    genre: Optional[Literal["billionaire", "werewolf", "mafia", "general"]] = "general"
+    rules: Optional[str] = None
+
+
+class EditChapterRequest(BaseModel):
+    title: Optional[str] = None
+    text: Optional[str] = None
+
+
+class GenerateChapterRequest(BaseModel):
+    chapter_number: int
+    user_instructions: Optional[str] = None
+
